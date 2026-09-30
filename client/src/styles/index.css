@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+/* Design tokens: Tailwind generates utilities from these (font-mono, bg-space-900, …). */
+@theme {
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-space-950: #04060c;
+  --color-space-900: #0a0f1c;
+  --color-space-800: #121a2e;
+  --color-space-700: #1e2942;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-space-950 font-sans text-slate-200 antialiased;
+  }
+}
