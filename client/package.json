@@ -10,8 +10,11 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "motion": "^13.5.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-globe.gl": "^2.38.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

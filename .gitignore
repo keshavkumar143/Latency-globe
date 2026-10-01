@@ -3,3 +3,9 @@ dist
 .env
 .env.*
 .DS_Store
+
+# Demo videos and other rendered media live outside the repo
+media/
+*.mp4
+*.mov
+*.webm

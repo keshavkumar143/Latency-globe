@@ -11,7 +11,7 @@ export const REQUEST_TIMEOUT_MS = 5000;
 export const MAX_CONCURRENT_TARGETS = 4;
 
 /** Query param that makes every request URL unique, so nothing is served from a cache. */
-export const CACHE_BUST_PARAM = '_lg';
+export const CACHE_BUST_PARAM = '_pa';
 
 /**
  * fetch() options for timing requests. "no-cors" returns an opaque response we can't

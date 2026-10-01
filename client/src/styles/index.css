@@ -9,6 +9,17 @@
   --color-space-900: #0a0f1c;
   --color-space-800: #121a2e;
   --color-space-700: #1e2942;
+
+  --animate-shimmer: shimmer 1.2s ease-in-out infinite;
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 }
 
 @layer base {

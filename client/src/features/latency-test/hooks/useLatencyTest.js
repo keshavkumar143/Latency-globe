@@ -6,12 +6,10 @@ import { runWithConcurrency } from '@/utils/concurrency';
 import { createQueuedResults, markInProgressAsStopped } from '../utils/results';
 
 /**
- * Measures every target with limited concurrency and writes each result to state as
- * soon as it's ready, so the UI updates live.
- *
- * @param {import('@/types/latency').Target[]} targets
+ * Measures targets with limited concurrency and writes each result to state as soon as
+ * it's ready, so the UI updates live. Results for targets outside a run are kept.
  */
-export function useLatencyTest(targets) {
+export function useLatencyTest() {
   /** @type {[Record<string, import('@/types/latency').TestResult>, Function]} */
   const [results, setResults] = useState({});
   const [isRunning, setIsRunning] = useState(false);
@@ -22,7 +20,8 @@ export function useLatencyTest(targets) {
   // Abort in-flight requests if the component unmounts mid-test.
   useEffect(() => stopTest, [stopTest]);
 
-  const startTest = useCallback(async () => {
+  /** @param {import('@/types/latency').Target[]} targets */
+  const startTest = useCallback(async (targets) => {
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -44,7 +43,7 @@ export function useLatencyTest(targets) {
     };
 
     setIsRunning(true);
-    setResults(createQueuedResults(targets));
+    setResults((previous) => ({ ...previous, ...createQueuedResults(targets) }));
     await runWithConcurrency(targets, MAX_CONCURRENT_TARGETS, measureTarget, signal);
 
     const wasReplacedByNewerTest = abortControllerRef.current !== abortController;
@@ -53,7 +52,7 @@ export function useLatencyTest(targets) {
     abortControllerRef.current = null;
     setIsRunning(false);
     if (signal.aborted) setResults((previous) => markInProgressAsStopped(previous));
-  }, [targets]);
+  }, []);
 
   const hasRun = Object.keys(results).length > 0;
 

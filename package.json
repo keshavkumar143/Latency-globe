@@ -1,5 +1,5 @@
 {
-  "name": "latency-globe",
+  "name": "pingatlas",
   "private": true,
   "workspaces": [
     "client"
