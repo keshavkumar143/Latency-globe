@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <strong>Live demo:</strong> coming soon ·
+  <strong><a href="https://pingatlas.onrender.com">Live demo</a></strong> ·
   <a href="#how-it-measures">How it measures</a> ·
   <a href="#getting-started">Run it locally</a>
 </p>

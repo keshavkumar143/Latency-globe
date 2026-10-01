@@ -130,6 +130,13 @@ Adding a provider: id/label/color in `constants/providers.js`, URL in `constants
   region from IP ranges) can replace `inspectEndpoint()` behind the same shape.
 - Up to 8 endpoints saved in localStorage; only finished data is persisted.
 
+## Deployment
+
+- Live at https://pingatlas.onrender.com (Render static site, auto-deploys from `main`).
+- Render settings: Root Directory empty (the lockfile is at the repo root), Build Command `npm ci && npm run build`,
+  Publish Directory `client/dist`, environment variable `NODE_VERSION=22` (Vite 8 needs Node 20.19+).
+- `client/index.html` has absolute `og:url` / `og:image` URLs for link previews; update them if the domain changes.
+
 ## Brand
 
 - Name: **PingAtlas** ("ping" = latency, "atlas" = world map). Slogan: "Measure · Visualize · Deploy smarter".
