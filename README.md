@@ -150,3 +150,7 @@ React 19 · Vite 8 · Tailwind CSS 4 · three.js with [react-globe.gl](https://g
 - Globe rendering by [globe.gl](https://github.com/vasturiano/globe.gl).
 
 Feedback, issues and pull requests are welcome.
+
+## License
+
+[MIT](LICENSE) © 2026 Keshav Kumar
