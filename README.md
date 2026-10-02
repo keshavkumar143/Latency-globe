@@ -23,8 +23,8 @@ see which region is actually fastest from where you are, and how your own server
 
 ## Features
 
-- **Live multi-cloud test.** Results stream onto the globe and into a list sorted fastest first. Stop and re-run at any
-  time, or test one provider at a time with the filters.
+- **Live multi-cloud test.** Results stream onto the globe and into a list sorted fastest first. Test one provider at a
+  time with the filters, and stop or re-test any single region or endpoint whenever you like.
 - **A real, zoomable globe.** Satellite, dark and street maps that sharpen as you zoom, down to street level. Arcs are
   colored by latency, and the packets travelling along them move faster on quicker routes.
 - **Fastest region and best per provider**, always on screen.
@@ -54,7 +54,7 @@ Latency colors: **blue** under 80 ms, **amber** 80–200 ms, **orange-red** over
 | AWS          |      36 | DynamoDB's health check, `https://dynamodb.<region>.amazonaws.com/ping`           |
 | Google Cloud |      43 | [gcping.com](https://gcping.com)'s Cloud Run service in each region               |
 | Azure        |      42 | Azure AI Services' regional host, `https://<region>.api.cognitive.microsoft.com/` |
-| Cloudflare   |       1 | `cdn-cgi/trace` on your nearest edge (Cloudflare is anycast)                      |
+| Cloudflare   |       1 | Cloudflare's DNS-over-HTTPS resolver at your nearest edge (Cloudflare is anycast) |
 
 **Good to know**
 
@@ -101,8 +101,9 @@ PingAtlas runs entirely in the browser, so the build output can be deployed to a
 There's no backend: nothing is sent to or stored on a PingAtlas server. To work, your browser contacts:
 
 - the cloud endpoints being measured;
-- [get.geojs.io](https://www.geojs.io/) or [ipwho.is](https://ipwho.is/) to estimate your location from your IP (skipped
-  if you've allowed precise location);
+- [speed.cloudflare.com](https://speed.cloudflare.com) to find your nearest Cloudflare edge and estimate your location
+  from your IP, falling back to [get.geojs.io](https://www.geojs.io/) or [ipwho.is](https://ipwho.is/) (precise location
+  is used instead if you've allowed it);
 - Cloudflare DNS-over-HTTPS and ipwho.is, only when you test a custom endpoint;
 - Esri for map tiles and Google Fonts for typefaces.
 

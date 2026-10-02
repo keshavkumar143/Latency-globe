@@ -14,6 +14,7 @@ import {
 import { DEFAULT_MAP_STYLE_ID, MAP_STYLE_STORAGE_KEY, MAP_STYLES } from '@/constants/mapStyles';
 import { TEST_STATUS } from '@/constants/testStatus';
 import { useElementSize } from '@/hooks/useElementSize';
+import { hasValidCoordinates } from '@/utils/geo';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { useGlobeCamera } from '../hooks/useGlobeCamera';
 import { createLatencyArcBuilder, createMarkerBuilder, getArcStrokeScale } from '../utils/globeLayers';
@@ -27,6 +28,9 @@ import { UserMarker } from './markers/UserMarker';
 const MAP_STYLE_STORAGE_OPTIONS = { isValid: (styleId) => Object.hasOwn(MAP_STYLES, styleId) };
 
 const isMeasured = ({ result }) => result.status === TEST_STATUS.DONE;
+
+/** Targets with no known location (an unidentified Cloudflare edge) are listed but not mapped. */
+const isMappable = ({ target }) => hasValidCoordinates(target);
 
 /**
  * Interactive 3D globe with real map tiles that sharpen as you zoom, a marker for every
@@ -62,10 +66,12 @@ export function GlobeView({ regionRows, endpointPins, userLocation, selectedId, 
   const [buildLatencyArcs] = useState(createLatencyArcBuilder);
   const [getMarkerHost] = useState(createMarkerHostRegistry);
 
+  const mappableRows = useMemo(() => regionRows.filter(isMappable), [regionRows]);
+
   const markers = useMemo(
     () =>
       buildMarkers([
-        ...regionRows.map(({ target }) => ({
+        ...mappableRows.map(({ target }) => ({
           id: target.id,
           kind: MARKER_KIND.REGION,
           lat: target.lat,
@@ -76,19 +82,19 @@ export function GlobeView({ regionRows, endpointPins, userLocation, selectedId, 
           ? [{ id: USER_MARKER_ID, kind: MARKER_KIND.USER, lat: userLocation.lat, lng: userLocation.lng }]
           : []),
       ]),
-    [buildMarkers, regionRows, endpointPins, userLocation],
+    [buildMarkers, mappableRows, endpointPins, userLocation],
   );
 
   const arcs = useMemo(() => {
     const measuredItems = [
-      ...regionRows.filter(isMeasured).map(({ target, result }) => ({ ...target, result })),
+      ...mappableRows.filter(isMeasured).map(({ target, result }) => ({ ...target, result })),
       ...endpointPins.filter(isMeasured),
     ];
     const allArcs = buildLatencyArcs(measuredItems, userLocation);
     return shouldReduceMotion ? allArcs.filter((arc) => arc.kind === ARC_KIND.TRAIL) : allArcs;
-  }, [buildLatencyArcs, regionRows, endpointPins, userLocation, shouldReduceMotion]);
+  }, [buildLatencyArcs, mappableRows, endpointPins, userLocation, shouldReduceMotion]);
 
-  const regionRowsById = useMemo(() => new Map(regionRows.map((row) => [row.target.id, row])), [regionRows]);
+  const regionRowsById = useMemo(() => new Map(mappableRows.map((row) => [row.target.id, row])), [mappableRows]);
   const endpointPinsById = useMemo(() => new Map(endpointPins.map((pin) => [pin.id, pin])), [endpointPins]);
 
   const focusedMarker = markers.find((marker) => marker.id === selectedId) ?? null;

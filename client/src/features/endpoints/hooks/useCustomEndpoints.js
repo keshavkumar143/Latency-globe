@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ENDPOINT_LOOKUP_ERROR, LOOKUP_STATUS, SAVED_ENDPOINTS_STORAGE_KEY } from '@/constants/customEndpoints';
 import { MEASUREMENT_ERROR } from '@/constants/measurement';
 import { IN_PROGRESS_STATUSES, TEST_STATUS } from '@/constants/testStatus';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { inspectEndpoint } from '@/services/endpoints/inspectEndpoint';
 import { describeMeasurementError, measureLatency } from '@/services/latency/measureLatency';
-import { getEndpointId, isValidStoredEndpoints, toStoredEndpoint, upsertEndpoint } from '../utils/endpointRecords';
+import {
+  getEndpointId,
+  isEndpointTesting,
+  isValidStoredEndpoints,
+  toStoredEndpoint,
+  upsertEndpoint,
+} from '../utils/endpointRecords';
 
 const KNOWN_LOOKUP_ERRORS = Object.values(ENDPOINT_LOOKUP_ERROR);
 
@@ -32,16 +38,20 @@ function markStopped(endpoint) {
 
 /**
  * The user's own endpoints: each is located (DNS → IP → geolocation) and timed in the
- * browser, in parallel. The list is saved across reloads.
+ * browser. Several can be tested at once, and each can be stopped on its own. The list is
+ * saved across reloads.
  */
 export function useCustomEndpoints() {
   /** @type {[import('../utils/endpointRecords').CustomEndpoint[], Function]} */
   const [endpoints, setEndpoints] = usePersistentState(SAVED_ENDPOINTS_STORAGE_KEY, [], STORAGE_OPTIONS);
-  const [testingId, setTestingId] = useState(null);
-  const abortControllerRef = useRef(null);
+  /** One controller per endpoint being tested; only the registered one may write that endpoint's results. */
+  const testsRef = useRef(new Map());
 
-  const stopEndpointTest = useCallback(() => abortControllerRef.current?.abort(), []);
-  useEffect(() => stopEndpointTest, [stopEndpointTest]);
+  // Abort in-flight requests if the component unmounts mid-test.
+  useEffect(() => {
+    const tests = testsRef.current;
+    return () => tests.forEach((controller) => controller.abort());
+  }, []);
 
   const updateEndpoint = useCallback(
     (id, update) =>
@@ -49,18 +59,34 @@ export function useCustomEndpoints() {
     [setEndpoints],
   );
 
+  const stopEndpointTest = useCallback(
+    (id) => {
+      const controller = testsRef.current.get(id);
+      if (!controller) return;
+      testsRef.current.delete(id);
+      controller.abort();
+      updateEndpoint(id, markStopped);
+    },
+    [updateEndpoint],
+  );
+
+  const stopAllEndpointTests = useCallback(
+    () => [...testsRef.current.keys()].forEach(stopEndpointTest),
+    [stopEndpointTest],
+  );
+
   const runTest = useCallback(
     async ({ id, url, hostname }) => {
-      abortControllerRef.current?.abort();
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-      const { signal } = abortController;
+      const tests = testsRef.current;
+      tests.get(id)?.abort();
+      const controller = new AbortController();
+      tests.set(id, controller);
+      const { signal } = controller;
 
-      const patchUnlessStopped = (patch) => {
-        if (!signal.aborted) updateEndpoint(id, (endpoint) => ({ ...endpoint, ...patch }));
+      const patchIfCurrent = (patch) => {
+        if (tests.get(id) === controller) updateEndpoint(id, (endpoint) => ({ ...endpoint, ...patch }));
       };
 
-      setTestingId(id);
       setEndpoints((previous) =>
         upsertEndpoint(previous, {
           id,
@@ -73,29 +99,23 @@ export function useCustomEndpoints() {
       );
 
       const lookupTask = inspectEndpoint(hostname, signal).then(
-        (data) => patchUnlessStopped({ lookup: { status: LOOKUP_STATUS.DONE, data } }),
-        (error) => patchUnlessStopped({ lookup: { status: LOOKUP_STATUS.ERROR, error: describeLookupError(error) } }),
+        (data) => patchIfCurrent({ lookup: { status: LOOKUP_STATUS.DONE, data } }),
+        (error) => patchIfCurrent({ lookup: { status: LOOKUP_STATUS.ERROR, error: describeLookupError(error) } }),
       );
       const latencyTask = measureLatency(url, { signal }).then(
-        (measurement) => patchUnlessStopped({ result: { status: TEST_STATUS.DONE, ...measurement } }),
-        (error) =>
-          patchUnlessStopped({ result: { status: TEST_STATUS.ERROR, error: describeMeasurementError(error) } }),
+        (measurement) => patchIfCurrent({ result: { status: TEST_STATUS.DONE, ...measurement } }),
+        (error) => patchIfCurrent({ result: { status: TEST_STATUS.ERROR, error: describeMeasurementError(error) } }),
       );
       await Promise.all([lookupTask, latencyTask]);
 
-      const wasReplacedByNewerTest = abortControllerRef.current !== abortController;
-      if (wasReplacedByNewerTest) return;
-
-      abortControllerRef.current = null;
-      setTestingId(null);
-      if (signal.aborted) updateEndpoint(id, markStopped);
+      if (tests.get(id) === controller) tests.delete(id);
     },
     [setEndpoints, updateEndpoint],
   );
 
   /**
    * Starts testing an endpoint (adding it if new) and returns its id right away.
-   * @param {{ url: string, hostname: string }} endpoint Output of parseEndpointInput()
+   * @param {{ url: string, hostname: string }} endpoint Output of parseEndpointInput() or a saved endpoint
    */
   const testEndpoint = useCallback(
     ({ url, hostname }) => {
@@ -108,11 +128,21 @@ export function useCustomEndpoints() {
 
   const removeEndpoint = useCallback(
     (id) => {
-      if (id === testingId) stopEndpointTest();
+      stopEndpointTest(id);
       setEndpoints((previous) => previous.filter((endpoint) => endpoint.id !== id));
     },
-    [setEndpoints, stopEndpointTest, testingId],
+    [setEndpoints, stopEndpointTest],
   );
 
-  return { endpoints, testingId, isTesting: testingId !== null, testEndpoint, stopEndpointTest, removeEndpoint };
+  const testingIds = useMemo(() => endpoints.filter(isEndpointTesting).map((endpoint) => endpoint.id), [endpoints]);
+
+  return {
+    endpoints,
+    testingIds,
+    isTesting: testingIds.length > 0,
+    testEndpoint,
+    stopEndpointTest,
+    stopAllEndpointTests,
+    removeEndpoint,
+  };
 }

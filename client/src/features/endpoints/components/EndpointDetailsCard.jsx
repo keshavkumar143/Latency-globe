@@ -1,7 +1,7 @@
 import { LatencyStat } from '@/components/latency/LatencyStat';
 import { Button } from '@/components/ui/Button';
 import { CardHeader } from '@/components/ui/CardHeader';
-import { RefreshIcon, TrashIcon } from '@/components/ui/icons';
+import { RefreshIcon, StopIcon, TrashIcon } from '@/components/ui/icons';
 import { GLOBE_COLORS } from '@/constants/globe';
 import { LOOKUP_STATUS } from '@/constants/customEndpoints';
 import { PROVIDERS } from '@/constants/providers';
@@ -70,7 +70,7 @@ function Comparison({ comparison }) {
 }
 
 /** Everything known about one custom endpoint, compared with the fastest region. */
-export function EndpointDetailsCard({ endpoint, fastestRegionRow, isTesting, onRetest, onRemove, onClose }) {
+export function EndpointDetailsCard({ endpoint, fastestRegionRow, isTesting, onStop, onRetest, onRemove, onClose }) {
   const comparison = compareWithFastestRegion(endpoint.result, fastestRegionRow);
   const isLikelyCdn = endpoint.lookup?.data?.isLikelyCdn;
 
@@ -102,10 +102,17 @@ export function EndpointDetailsCard({ endpoint, fastestRegionRow, isTesting, onR
         <p className="text-xs text-slate-500">Run the region test to compare with the fastest cloud region.</p>
       )}
       <div className="flex gap-2">
-        <Button variant="secondary" size="sm" onClick={onRetest} disabled={isTesting}>
-          <RefreshIcon className="size-3.5" />
-          Re-test
-        </Button>
+        {isTesting ? (
+          <Button variant="danger" size="sm" onClick={onStop}>
+            <StopIcon className="size-3" />
+            Stop
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={onRetest}>
+            <RefreshIcon className="size-3.5" />
+            Re-test
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={onRemove}>
           <TrashIcon className="size-3.5" />
           Remove

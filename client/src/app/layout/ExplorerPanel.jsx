@@ -14,7 +14,8 @@ export function ExplorerPanel({
   fastestRegionRow,
   selectedId,
   onSelect,
-  onRemoveEndpoint,
+  regionActions,
+  endpointActions,
   className = '',
   delay,
 }) {
@@ -30,14 +31,23 @@ export function ExplorerPanel({
       </div>
 
       {activeTab === EXPLORER_TAB.REGIONS ? (
-        <RegionResultsList rows={regionRows} selectedId={selectedId} onSelect={onSelect} />
+        <RegionResultsList
+          rows={regionRows}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          onStop={regionActions.stop}
+          onTest={regionActions.test}
+        />
       ) : (
         <EndpointList
           endpoints={endpoints}
+          testingIds={endpointActions.testingIds}
           fastestRegionRow={fastestRegionRow}
           selectedId={selectedId}
           onSelect={onSelect}
-          onRemove={onRemoveEndpoint}
+          onStop={endpointActions.stop}
+          onRetest={endpointActions.retest}
+          onRemove={endpointActions.remove}
         />
       )}
 

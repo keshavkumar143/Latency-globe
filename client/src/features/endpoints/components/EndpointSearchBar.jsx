@@ -5,7 +5,10 @@ import { GlobeIcon, StopIcon } from '@/components/ui/icons';
 import { MOTION } from '@/constants/motion';
 import { parseEndpointInput } from '../utils/parseEndpointInput';
 
-/** "Test your own endpoint" input. Its button turns into Stop while a test runs. */
+/**
+ * "Test your own endpoint" input. Enter always tests what's typed, so several endpoints can
+ * run at once; while any test runs, the button becomes Stop and stops them all.
+ */
 export function EndpointSearchBar({ isTesting, onTest, onStop }) {
   const inputId = useId();
   const errorId = `${inputId}-error`;
@@ -14,11 +17,6 @@ export function EndpointSearchBar({ isTesting, onTest, onStop }) {
 
   function handleSubmit(event) {
     event.preventDefault();
-    if (isTesting) {
-      onStop();
-      return;
-    }
-
     const parsed = parseEndpointInput(value);
     if (!parsed.ok) {
       setError(parsed.error);
@@ -57,13 +55,17 @@ export function EndpointSearchBar({ isTesting, onTest, onStop }) {
           aria-describedby={error ? errorId : undefined}
           className="h-full min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
         />
+        {/*
+          Separate keys give Stop and Test separate <button> elements. Sharing one, a click on Stop would
+          re-render it into the submit button mid-click, and the browser would then submit the form.
+        */}
         {isTesting ? (
-          <Button type="submit" variant="danger" size="sm">
+          <Button key="stop" type="button" variant="danger" size="sm" onClick={onStop}>
             <StopIcon className="size-3" />
             Stop
           </Button>
         ) : (
-          <Button type="submit" size="sm">
+          <Button key="test" type="submit" size="sm">
             Test
           </Button>
         )}

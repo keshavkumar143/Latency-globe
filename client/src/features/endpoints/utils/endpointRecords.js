@@ -31,10 +31,21 @@ export function isEndpointId(id) {
   return Boolean(id?.startsWith(ENDPOINT_ID_PREFIX));
 }
 
-/** Adds or refreshes an endpoint at the top of the list, capped at MAX_SAVED_ENDPOINTS. */
+/**
+ * Adds a new endpoint at the top of the list (capped at MAX_SAVED_ENDPOINTS), or refreshes
+ * an existing one in place so re-testing doesn't reorder the list.
+ */
 export function upsertEndpoint(endpoints, endpoint) {
-  const others = endpoints.filter((existing) => existing.id !== endpoint.id);
-  return [endpoint, ...others].slice(0, MAX_SAVED_ENDPOINTS);
+  const existing = endpoints.find((candidate) => candidate.id === endpoint.id);
+  if (!existing) return [endpoint, ...endpoints].slice(0, MAX_SAVED_ENDPOINTS);
+  return endpoints.map((candidate) =>
+    candidate.id === endpoint.id ? { ...endpoint, addedAt: existing.addedAt } : candidate,
+  );
+}
+
+/** True while an endpoint's latency or location lookup is still running. @param {CustomEndpoint} endpoint */
+export function isEndpointTesting(endpoint) {
+  return endpoint.result?.status === TEST_STATUS.RUNNING || endpoint.lookup?.status === LOOKUP_STATUS.LOADING;
 }
 
 /** Only finished data is saved; anything mid-flight would be stale after a reload. */

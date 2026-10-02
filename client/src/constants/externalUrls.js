@@ -12,10 +12,18 @@ export const EXTERNAL_URLS = Object.freeze({
   /** Azure AI Services' regional host. It answers without a key, so it works as a regional ping target. */
   azurePing: (regionCode) => `https://${regionCode}.api.cognitive.microsoft.com/`,
 
-  /** Cloudflare is anycast: this reaches whichever edge is nearest to the user. */
-  cloudflareTrace: 'https://www.cloudflare.com/cdn-cgi/trace',
-  /** Same trace on another hostname, read once to learn the edge's location without warming the timed connection. */
-  cloudflareTraceForLocation: 'https://speed.cloudflare.com/cdn-cgi/trace',
+  /**
+   * Cloudflare's speed-test metadata: the user's nearest edge ("colo") and Cloudflare's IP geolocation of the user.
+   * Unlike /cdn-cgi/trace, it isn't on privacy filter lists (EasyPrivacy blocks cloudflare.com/cdn-cgi/trace).
+   */
+  cloudflareMeta: 'https://speed.cloudflare.com/meta',
+  /** Fallback edge lookup when /meta fails; blocked by EasyPrivacy, so it only helps in browsers without it. */
+  cloudflareTrace: 'https://speed.cloudflare.com/cdn-cgi/trace',
+  /**
+   * Timed to measure the nearest Cloudflare edge: Cloudflare's DNS-over-HTTPS resolver answers at the edge itself
+   * (~1 ms server time; speed.cloudflare.com/__down adds ~30 ms of Worker time) and isn't on filter lists.
+   */
+  cloudflareEdgePing: 'https://cloudflare-dns.com/dns-query?name=cloudflare.com&type=A&ct=application/dns-json',
 
   /** Cloudflare DNS-over-HTTPS, JSON API. */
   dnsOverHttps: 'https://cloudflare-dns.com/dns-query',

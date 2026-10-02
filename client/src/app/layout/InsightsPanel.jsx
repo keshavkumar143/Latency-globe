@@ -9,17 +9,26 @@ import { RegionDetailsCard } from '@/features/latency-test/components/RegionDeta
 import { TestProgress } from '@/features/latency-test/components/TestProgress';
 import { UserLocationCard } from '@/features/location/components/UserLocationCard';
 
-function SelectionDetails({ selection, fastestRegionRow, endpointActions, onClose }) {
+function SelectionDetails({ selection, fastestRegionRow, regionActions, endpointActions, onClose }) {
   switch (selection.kind) {
     case MARKER_KIND.REGION:
-      return <RegionDetailsCard target={selection.row.target} result={selection.row.result} onClose={onClose} />;
+      return (
+        <RegionDetailsCard
+          target={selection.row.target}
+          result={selection.row.result}
+          onStop={regionActions.stop}
+          onTest={regionActions.test}
+          onClose={onClose}
+        />
+      );
     case MARKER_KIND.ENDPOINT: {
       const { endpoint } = selection;
       return (
         <EndpointDetailsCard
           endpoint={endpoint}
           fastestRegionRow={fastestRegionRow}
-          isTesting={endpointActions.isTesting}
+          isTesting={endpointActions.testingIds.includes(endpoint.id)}
+          onStop={() => endpointActions.stop(endpoint.id)}
           onRetest={() => endpointActions.retest(endpoint)}
           onRemove={() => endpointActions.remove(endpoint.id)}
           onClose={onClose}
@@ -43,6 +52,7 @@ export function InsightsPanel({
   fastestRegionRow,
   testState,
   userLocation,
+  regionActions,
   endpointActions,
   className = '',
   delay,
@@ -69,6 +79,7 @@ export function InsightsPanel({
             <SelectionDetails
               selection={selection}
               fastestRegionRow={fastestRegionRow}
+              regionActions={regionActions}
               endpointActions={endpointActions}
               onClose={onClearSelection}
             />

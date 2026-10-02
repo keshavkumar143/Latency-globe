@@ -1,5 +1,5 @@
 import { ALL_PROVIDERS, PROVIDERS } from '@/constants/providers';
-import { FINISHED_STATUSES, IN_PROGRESS_STATUSES, TEST_STATUS, TEST_STATUS_SORT_ORDER } from '@/constants/testStatus';
+import { FINISHED_STATUSES, TEST_STATUS, TEST_STATUS_SORT_ORDER } from '@/constants/testStatus';
 
 /**
  * @typedef {import('@/types/latency').Target} Target
@@ -15,14 +15,17 @@ export function createQueuedResults(targets) {
   return Object.fromEntries(targets.map((target) => [target.id, { status: TEST_STATUS.QUEUED }]));
 }
 
-/** Marks every queued or running result as stopped. @param {ResultsById} results @returns {ResultsById} */
-export function markInProgressAsStopped(results) {
-  return Object.fromEntries(
-    Object.entries(results).map(([targetId, result]) => [
-      targetId,
-      IN_PROGRESS_STATUSES.includes(result.status) ? { status: TEST_STATUS.STOPPED } : result,
-    ]),
+/**
+ * Marks the given targets as stopped if a run queued them but never started them.
+ * @param {ResultsById} results @param {Set<string>} targetIds @returns {ResultsById}
+ */
+export function markQueuedAsStopped(results, targetIds) {
+  const updates = Object.fromEntries(
+    [...targetIds]
+      .filter((targetId) => results[targetId]?.status === TEST_STATUS.QUEUED)
+      .map((targetId) => [targetId, { status: TEST_STATUS.STOPPED }]),
   );
+  return Object.keys(updates).length > 0 ? { ...results, ...updates } : results;
 }
 
 /** @param {ResultRow} a @param {ResultRow} b */

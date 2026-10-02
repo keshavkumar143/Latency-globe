@@ -4,7 +4,7 @@ import { filterRowsByQuery, findSlowestMedianMs } from '../utils/results';
 import { ResultListItem } from './ResultListItem';
 
 /** Every region's result, fastest first, with a text filter. Rows glide into place as results arrive. */
-export function RegionResultsList({ rows, selectedId, onSelect }) {
+export function RegionResultsList({ rows, selectedId, onSelect, onStop, onTest }) {
   const [query, setQuery] = useState('');
   const matchingRows = filterRowsByQuery(rows, query);
   const slowestMedianMs = findSlowestMedianMs(rows);
@@ -28,6 +28,8 @@ export function RegionResultsList({ rows, selectedId, onSelect }) {
             maxMs={slowestMedianMs}
             isSelected={target.id === selectedId}
             onSelect={onSelect}
+            onStop={onStop}
+            onTest={onTest}
           />
         ))}
         {matchingRows.length === 0 && (

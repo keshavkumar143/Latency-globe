@@ -50,7 +50,7 @@ export function App() {
   const clearSelection = useCallback(() => setSelectedId(null), []);
   useEscapeKey(clearSelection);
 
-  const { testEndpoint, removeEndpoint } = customEndpoints;
+  const { testEndpoint, stopEndpointTest, removeEndpoint } = customEndpoints;
   const startEndpointTest = useCallback(
     (endpoint) => {
       setSelectedId(testEndpoint(endpoint));
@@ -59,9 +59,16 @@ export function App() {
     [testEndpoint],
   );
   const endpointActions = useMemo(
-    () => ({ isTesting: customEndpoints.isTesting, retest: startEndpointTest, remove: removeEndpoint }),
-    [customEndpoints.isTesting, startEndpointTest, removeEndpoint],
+    () => ({
+      testingIds: customEndpoints.testingIds,
+      retest: startEndpointTest,
+      stop: stopEndpointTest,
+      remove: removeEndpoint,
+    }),
+    [customEndpoints.testingIds, startEndpointTest, stopEndpointTest, removeEndpoint],
   );
+  const { testTarget, stopTarget } = latencyTest;
+  const regionActions = useMemo(() => ({ test: testTarget, stop: stopTarget }), [testTarget, stopTarget]);
 
   const runRegionTest = () => latencyTest.startTest(visibleRows.map((row) => row.target));
   const fastestTitle =
@@ -75,7 +82,7 @@ export function App() {
             <EndpointSearchBar
               isTesting={customEndpoints.isTesting}
               onTest={startEndpointTest}
-              onStop={customEndpoints.stopEndpointTest}
+              onStop={customEndpoints.stopAllEndpointTests}
             />
           }
           actions={
@@ -121,6 +128,7 @@ export function App() {
               fastestRegionRow={fastestRegionRow}
               testState={latencyTest}
               userLocation={userLocation}
+              regionActions={regionActions}
               endpointActions={endpointActions}
               delay={MOTION.PANEL_STAGGER_SECONDS}
               className="lg:absolute lg:right-6 lg:top-6 lg:max-h-[calc(100%-16rem)] lg:w-80"
@@ -133,7 +141,8 @@ export function App() {
               fastestRegionRow={fastestRegionRow}
               selectedId={selectedId}
               onSelect={setSelectedId}
-              onRemoveEndpoint={removeEndpoint}
+              regionActions={regionActions}
+              endpointActions={endpointActions}
               delay={MOTION.PANEL_STAGGER_SECONDS * 2}
               className="max-h-[75vh] lg:absolute lg:bottom-6 lg:left-6 lg:top-6 lg:max-h-none lg:w-[22rem]"
             />

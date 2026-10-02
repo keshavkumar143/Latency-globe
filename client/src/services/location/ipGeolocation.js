@@ -1,5 +1,6 @@
 import { EXTERNAL_URLS } from '@/constants/externalUrls';
 import { IP_LOOKUP_TIMEOUT_MS } from '@/constants/location';
+import { getCloudflareMeta } from '@/services/network/cloudflareMeta';
 import { hasValidCoordinates } from '@/utils/geo';
 
 /**
@@ -11,42 +12,42 @@ import { hasValidCoordinates } from '@/utils/geo';
  * @property {string} countryCode  ISO 3166-1 alpha-2
  */
 
-/** Each service has its own response shape; `parse` maps it to an IpLocation. */
-const IP_LOOKUP_SERVICES = [
-  {
-    url: EXTERNAL_URLS.geojsIpLookup,
-    parse: (data) => ({
-      lat: Number(data.latitude),
-      lng: Number(data.longitude),
-      city: data.city,
-      country: data.country,
-      countryCode: data.country_code,
-    }),
-  },
-  {
-    url: EXTERNAL_URLS.ipwhoisIpLookup,
-    parse: (data) => ({
-      lat: Number(data.latitude),
-      lng: Number(data.longitude),
-      city: data.city,
-      country: data.country,
-      countryCode: data.country_code,
-    }),
-  },
+async function fetchJson(url) {
+  const response = await fetch(url, { signal: AbortSignal.timeout(IP_LOOKUP_TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+/** geojs.io and ipwho.is return the same field names. */
+function parseGeoResponse(data) {
+  return {
+    lat: Number(data.latitude),
+    lng: Number(data.longitude),
+    city: data.city,
+    country: data.country,
+    countryCode: data.country_code,
+  };
+}
+
+/**
+ * Lookups tried in order. Cloudflare's comes first: it's typically the most accurate, and
+ * its request is shared with finding the user's nearest Cloudflare edge.
+ */
+const IP_LOOKUPS = [
+  async () => (await getCloudflareMeta()).visitor,
+  async () => parseGeoResponse(await fetchJson(EXTERNAL_URLS.geojsIpLookup)),
+  async () => parseGeoResponse(await fetchJson(EXTERNAL_URLS.ipwhoisIpLookup)),
 ];
 
 /**
- * Approximate location from the user's IP address. Tries each service in order.
+ * Approximate location from the user's IP address.
  * @returns {Promise<IpLocation>}
  */
 export async function getIpLocation() {
-  for (const service of IP_LOOKUP_SERVICES) {
+  for (const lookup of IP_LOOKUPS) {
     try {
-      const response = await fetch(service.url, { signal: AbortSignal.timeout(IP_LOOKUP_TIMEOUT_MS) });
-      if (!response.ok) continue;
-
-      const location = service.parse(await response.json());
-      if (hasValidCoordinates(location)) return location;
+      const location = await lookup();
+      if (location && hasValidCoordinates(location)) return location;
     } catch {
       // Try the next service.
     }

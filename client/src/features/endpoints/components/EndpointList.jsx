@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { LatencyBar } from '@/components/latency/LatencyBar';
 import { LatencyValue } from '@/components/latency/LatencyValue';
+import { MeasurementToggle } from '@/components/latency/MeasurementToggle';
 import { Button } from '@/components/ui/Button';
 import { CloseIcon } from '@/components/ui/icons';
 import { ProviderBadge } from '@/components/ui/ProviderBadge';
@@ -16,14 +17,14 @@ function describePlace(lookup) {
   return lookup?.error ?? '';
 }
 
-function EndpointRow({ endpoint, maxMs, isSelected, onSelect, onRemove }) {
+function EndpointRow({ endpoint, maxMs, isSelected, isTesting, onSelect, onStop, onRetest, onRemove }) {
   return (
     <motion.li layout="position" transition={MOTION.LIST_REORDER} className="group relative">
       <button
         type="button"
         onClick={() => onSelect(endpoint.id)}
         aria-pressed={isSelected}
-        className={`grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-2.5 gap-y-2 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-white/5 ${
+        className={`grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-2.5 gap-y-2 rounded-lg py-2.5 pl-3 pr-[4.25rem] text-left transition-colors hover:bg-white/5 ${
           isSelected ? 'bg-white/10 ring-1 ring-white/15' : ''
         }`}
       >
@@ -32,22 +33,30 @@ function EndpointRow({ endpoint, maxMs, isSelected, onSelect, onRemove }) {
           <span className="block truncate text-sm text-slate-100">{endpoint.hostname}</span>
           <span className="block truncate text-[11px] text-slate-500">{describePlace(endpoint.lookup)}</span>
         </span>
-        <span className="pr-6">
-          <LatencyValue result={endpoint.result} />
-        </span>
+        <LatencyValue result={endpoint.result} />
         <span className="col-span-3">
           <LatencyBar result={endpoint.result} maxMs={maxMs} />
         </span>
       </button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onRemove(endpoint.id)}
-        aria-label={`Remove ${endpoint.hostname}`}
-        className="absolute right-1 top-1.5 size-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-      >
-        <CloseIcon className="size-3.5" />
-      </Button>
+      <div className="absolute right-1.5 top-1.5 flex">
+        <MeasurementToggle
+          isMeasuring={isTesting}
+          hasResult
+          name={endpoint.hostname}
+          onStop={() => onStop(endpoint.id)}
+          onTest={() => onRetest(endpoint)}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(endpoint.id)}
+          aria-label={`Remove ${endpoint.hostname}`}
+          title="Remove"
+          className="size-7 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
+        >
+          <CloseIcon className="size-3.5" />
+        </Button>
+      </div>
     </motion.li>
   );
 }
@@ -85,7 +94,16 @@ function EmptyState() {
 }
 
 /** Saved custom endpoints, compared side by side against the fastest region. */
-export function EndpointList({ endpoints, fastestRegionRow, selectedId, onSelect, onRemove }) {
+export function EndpointList({
+  endpoints,
+  testingIds,
+  fastestRegionRow,
+  selectedId,
+  onSelect,
+  onStop,
+  onRetest,
+  onRemove,
+}) {
   if (endpoints.length === 0) return <EmptyState />;
 
   const measuredMs = endpoints
@@ -104,7 +122,10 @@ export function EndpointList({ endpoints, fastestRegionRow, selectedId, onSelect
             endpoint={endpoint}
             maxMs={maxMs}
             isSelected={endpoint.id === selectedId}
+            isTesting={testingIds.includes(endpoint.id)}
             onSelect={onSelect}
+            onStop={onStop}
+            onRetest={onRetest}
             onRemove={onRemove}
           />
         ))}

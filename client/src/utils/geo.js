@@ -9,6 +9,18 @@ export function formatCoordinates(lat, lng) {
   return `${latitude}, ${longitude}`;
 }
 
+const COUNTRY_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
+
+/** "IN" → "India". Returns the code itself if it isn't a known region. */
+export function countryNameFromCode(code) {
+  if (!code) return undefined;
+  try {
+    return COUNTRY_NAMES.of(code);
+  } catch {
+    return code;
+  }
+}
+
 /** @param {{ lat: unknown, lng: unknown }} point */
 export function hasValidCoordinates({ lat, lng }) {
   return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;

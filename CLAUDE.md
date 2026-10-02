@@ -96,7 +96,8 @@ Adding a provider: id/label/color in `constants/providers.js`, URL in `constants
   connection; the median is shown. One failed timed request is skipped. A failed warm-up fails the target.
 - 4 targets in flight at once (spec). A full run of all 122 targets takes about a minute.
 - Targets: AWS DynamoDB `/ping`; GCP via gcping.com's per-region Cloud Run URLs; Azure via
-  `<region>.api.cognitive.microsoft.com` (overridable in `config/azureEndpoints.js`); Cloudflare via `cdn-cgi/trace`.
+  `<region>.api.cognitive.microsoft.com` (overridable in `config/azureEndpoints.js`); Cloudflare via its DNS-over-HTTPS resolver
+  (`cloudflare-dns.com`), which answers at the edge itself.
 - **Custom endpoints measure response time**, not pure network latency: cache-busting sends every request to the
   origin, so server processing is included. The UI says so and suggests testing a light path like `/health`.
 - Latency colors: blue < 80 ms, amber 80–200 ms, orange-red > 200 ms (`constants/latency.js`, shared with the globe).
@@ -154,6 +155,25 @@ Adding a provider: id/label/color in `constants/providers.js`, URL in `constants
 - No permission prompt on page load (browsers penalize it). If geolocation is already granted it's used; otherwise IP
   geolocation, plus a "Use precise location" button that prompts on click.
 - Precise locations display coordinates rather than the IP-derived city, which can be hundreds of km off.
+- IP lookup order: `speed.cloudflare.com/meta` (most accurate, and shared with the Cloudflare edge lookup via
+  `services/network/cloudflareMeta.js`), then geojs.io, then ipwho.is.
+
+## Cloudflare edge
+
+- Privacy lists (EasyPrivacy → Brave Shields, uBlock) block `cloudflare.com/cdn-cgi/trace` for third-party sites, so
+  it can't be relied on. The edge is identified via `speed.cloudflare.com/meta` (trace + `data/cloudflareLocations.json`
+  as fallback) and timed against `cloudflare-dns.com` DoH (~1 ms server time; `speed.cloudflare.com/__down` adds ~30 ms).
+- If the edge can't be identified, the target is still listed and measured as "Nearest edge" with no coordinates;
+  the globe skips targets without coordinates.
+
+## Per-item control
+
+- Any region or endpoint can be stopped or re-tested on its own (row action, details card), during or outside a run.
+- `useLatencyTest` and `useCustomEndpoints` keep one AbortController per item in a Map. Only the registered controller
+  may write that item's result, so a stopped or replaced measurement can never overwrite a newer one.
+- **Gotcha: toggle buttons need keys.** When Stop and Test/Re-test render in the same spot, give them different `key`s.
+  Sharing one `<button>`, a click on Stop re-renders it mid-click: in the search bar it became the form's submit
+  button and re-submitted (restarting the test); in rows it animated from one state into the other.
 
 ## Build progress
 
